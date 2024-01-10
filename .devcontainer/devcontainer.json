@@ -19,15 +19,7 @@
 		],
 		"python.testing.unittestEnabled": false,
 		"python.testing.pytestEnabled": true,
-		"python.linting.lintOnSave": true,
-		"python.linting.flake8Enabled": true,
 		"editor.formatOnSave": true,
-		"python.linting.banditPath": "/usr/local/bin/bandit",
-		"python.linting.flake8Path": "/usr/local/bin/flake8",
-		"python.linting.mypyPath": "/usr/local/bin/mypy",
-		"python.linting.pycodestylePath": "/usr/local/bin/pycodestyle",
-		"python.linting.pydocstylePath": "/usr/local/bin/pydocstyle",
-		"python.linting.pylintPath": "/usr/bin/pylint",
 		"terminal.integrated.defaultProfile.linux": "bash (login)",
 		"terminal.integrated.profiles.linux": {
 			"bash (login)": {
