@@ -34,5 +34,6 @@ RATIO_LARGE_TO_SMALL_PIX = 9.47
 NUM_PIXELS = 12
 NUM_SMALL_PIXELS = 4
 NUM_LARGE_PIXELS = NUM_PIXELS - NUM_SMALL_PIXELS
+NUM_DETECTORS = 4
 
 log.debug(f"padre_meddea version: {__version__}")

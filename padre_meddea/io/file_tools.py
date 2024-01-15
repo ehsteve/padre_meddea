@@ -1,14 +1,25 @@
 """
 This module provides a generic file reader.
 """
-import numpy as np
+import os
 
 import ccsdspy
-from ccsdspy.utils import split_packet_bytes
-from ccsdspy.utils import split_by_apid
-from ccsdspy import PacketField, PacketArray
+import numpy as np
+from ccsdspy import PacketArray, PacketField
+from ccsdspy.utils import split_by_apid, split_packet_bytes
 
-__all__ = ["read_file"]
+import padre_meddea
+
+__all__ = [
+    "read_file",
+    "summarize_file",
+    "print_file",
+    "parse_l0_file",
+    "read_l0_file",
+    "packet_definition_ph",
+    "packet_definition_hk",
+    "packet_definition_hist",
+]
 
 APID_HIST = 0xA2  # 162
 APID_PHOTON = 0xA0  # 160
@@ -23,13 +34,13 @@ APID_DICT = {
 }
 
 
-def read_file(data_filename):
+def read_file(datafile_path : str | os.PathLike):
     """
-    Read a file.
+    Read a file. Automatically determines which kind of file it is.
 
     Parameters
     ----------
-    data_filename: str
+    datafile_path: str
         A file to read.
 
     Returns
@@ -39,13 +50,13 @@ def read_file(data_filename):
     Examples
     --------
     """
-    result = read_l0_file(data_filename)
+    result = read_l0_file(datafile_path)
     return result
 
 
-def summarize_file(data_filename):
+def summarize_file(datafile_path : str | os.PathLike) -> None:
     """Given a data, provide a summary of the contents."""
-    data = parse_l0_file(data_filename)
+    data = parse_l0_file(datafile_path)
 
     for this_apid in data.keys():
         if this_apid in list(APID_DICT.keys()):
@@ -53,19 +64,19 @@ def summarize_file(data_filename):
             print(f"Found {len(data[this_apid])} packets.")
             number_of_hits = 0
             for this_packet in data[APID_PHOTON]:
-                number_of_hits += int(this_packet['PIXEL_DATA'] / 3)
+                number_of_hits += int(this_packet["PIXEL_DATA"] / 3)
         else:
             print(f"0x{this_apid:02x} unknown")
-    
+
     print(f"Found {len()}")
 
 
-def print_file(data_filename, num_lines=100, columns=8):
+def print_file(datafile_path : str | os.PathLike, num_lines : int = 100, columns : int = 8) -> None:
     """Given a binary level 0 file, print out the contents so that it can be visually inspected.
 
     Parameters
     ----------
-    data_filename: str
+    datafile_path: str
         A file to read.
     num_lines: int
         The number of lines to print
@@ -79,7 +90,7 @@ def print_file(data_filename, num_lines=100, columns=8):
     inside_packet = False
     packet_start_index = 0
     packet_counter = [0, 0, 0, 0]
-    data = np.fromfile(data_filename, dtype=">u2")
+    data = np.fromfile(datafile_path, dtype=">u2")
     for i, this_num in enumerate(data[0 : columns * num_lines]):
         if (i % columns) == (columns - 1):
             end_char = "\n"
@@ -119,13 +130,13 @@ def print_file(data_filename, num_lines=100, columns=8):
     print(f"Found {packet_counter[3]} command packets.")
 
 
-def parse_l0_file(data_filename: str, include_ccsds_headers: bool = True):
+def parse_l0_file(datafile_path : str | os.PathLike, include_ccsds_headers: bool = True) -> dict:
     """
     Parse a level 0 data file.
 
     Parameters
     ----------
-    data_filename : str
+    datafile_path : str
         A file to read.
     include_ccsds_headers : bool
         If True then return the CCSDS headers in the data arrays.
@@ -135,7 +146,7 @@ def parse_l0_file(data_filename: str, include_ccsds_headers: bool = True):
     data : dict
         A dictionary of data arrays. Keys are the APIDs.
     """
-    with open(data_filename, "rb") as mixed_file:
+    with open(datafile_path, "rb") as mixed_file:
         stream_by_apid = split_by_apid(mixed_file)
     result = {}
 
@@ -154,7 +165,8 @@ def parse_l0_file(data_filename: str, include_ccsds_headers: bool = True):
         pkt = ccsdspy.VariableLength(packet_def)
         try:
             data = pkt.load(
-                stream_by_apid[APID_PHOTON], include_primary_header=include_ccsds_headers
+                stream_by_apid[APID_PHOTON],
+                include_primary_header=include_ccsds_headers,
             )
             result.update({APID_PHOTON: data})
         except RuntimeError as error:
@@ -163,16 +175,16 @@ def parse_l0_file(data_filename: str, include_ccsds_headers: bool = True):
     return result
 
 
-def read_lvl0_file(data_filename):
+def read_l0_file(datafile_path : str | os.PathLike):
     """Read a level 0 data file.
 
     Args:
-        data_filename (_type_): _description_
+        datafile_path (_type_): _description_
     """
-    data = parse_l0_file(data_filename)
+    data = parse_l0_file(datafile_path)
     number_of_hits = 0
     for this_packet in data[APID_PHOTON]:
-        number_of_hits += int(this_packet['PIXEL_DATA'] / 3)
+        number_of_hits += int(this_packet["PIXEL_DATA"] / 3)
 
     pixel_data = np.zeros(number_of_hits)
     pixel_times = np.zeros(number_of_hits)
@@ -180,17 +192,17 @@ def read_lvl0_file(data_filename):
     pixel_number = np.zeros(number_of_hits)
 
 
-def packet_definition_hist():
+def packet_definition_hist() -> list:
     """Return the packet definition for the histogram packets."""
     # the number of pixels provided by a histogram packet
-    NUM_PIXELS = 8 * 4
+    TOTAL_NUM_PIXELS = padre_meddea.NUM_PIXELS * padre_meddea.NUM_DETECTORS
 
     p = [
         PacketField(name="START_TIME", data_type="uint", bit_length=4 * 16),
         PacketField(name="END_TIME", data_type="uint", bit_length=4 * 16),
     ]
 
-    for i in range(NUM_PIXELS):
+    for i in range(TOTAL_NUM_PIXELS):
         p += [
             PacketField(name=f"HISTOGRAM_SYNC{i}", data_type="uint", bit_length=8),
             PacketField(name=f"HISTOGRAM_DETNUM{i}", data_type="uint", bit_length=3),
@@ -208,7 +220,7 @@ def packet_definition_hist():
     return p
 
 
-def packet_definition_ph():
+def packet_definition_ph() -> list:
     """Return the packet definition for the photon packets."""
     p = [
         PacketField(name="TIME", data_type="uint", bit_length=4 * 16),
@@ -218,5 +230,16 @@ def packet_definition_ph():
         PacketArray(
             name="PIXEL_DATA", data_type="uint", bit_length=16, array_shape="expand"
         ),
+    ]
+    return p
+
+
+def packet_definition_hk() -> list:
+    """Return the packet definition for housekeeping packets."""
+
+    p = [
+        PacketField(name="TIME", data_type="uint", bit_length=32),
+        PacketArray("HOUSEKEEPING", data_type="uint", bit_length=16, array_shape=8),
+        PacketField("CHECKSUM", data_type="uint", bit_length=16),
     ]
     return p
