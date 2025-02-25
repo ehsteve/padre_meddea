@@ -78,6 +78,25 @@ def pixel_to_str(pixel_num: int) -> str:
     return f"Pixel{pixel_num}{pixel_size}"
 
 
+def parse_pixelids(ids):
+    """
+    Given pixel id infomration, return the asic numbers and channel numbers
+    """
+    asic_nums = (ids & 0b11100000) >> 5
+    channel_nums = ids & 0b00011111
+    return asic_nums, channel_nums
+
+
+def pixelid_to_str(ids):
+    """
+    Given unparse pixel ids, return strings for each 
+    """
+    asic_nums, channel_nums = parse_pixelids(ids)
+    pixel_nums = [channel_to_pixel(this_chan) for this_chan in channel_nums]
+    result = [f'Det{str(this_asic)}{pixel_to_str(this_pix)}' for this_asic, this_pix in zip(asic_nums, pixel_nums)]
+    return result
+
+
 def has_baseline(filename: Path, packet_count=10) -> bool:
     """Given a stream of photon packets, check whether the baseline measurement is included.
     Baseline packets have one extra word per photon for a total of 4 words (8 bytes).

@@ -20,7 +20,7 @@ from padre_meddea import log
 from padre_meddea.io import file_tools, fits_tools
 from padre_meddea.util import util
 
-from padre_meddea.util.util import create_science_filename, calc_time
+from padre_meddea.util.util import create_science_filename, calc_time, parse_pixelids
 from padre_meddea.io.file_tools import read_raw_file
 from padre_meddea.io.fits_tools import (
     add_process_info_to_header,
@@ -194,9 +194,7 @@ def process_file(filename: Path, overwrite=False) -> list:
             output_files.append(path)
         if parsed_data["spectra"] is not None:
             timestamps, data, spectra, ids = parsed_data["spectra"]
-            asic_nums = (ids & 0b11100000) >> 5
-            channel_nums = ids & 0b00011111
-            # TODO check that asic_nums and channel_nums do not change
+            asic_nums, channel_nums = parse_pixelids(ids)
             time_s = data["TIME_S"]
             time_clk = data["TIME_CLOCKS"]
 
@@ -250,23 +248,27 @@ def process_file(filename: Path, overwrite=False) -> list:
             hdul.writeto(path, overwrite=overwrite)
             output_files.append(path)
 
-            # create timeseries for each spectrum
+            # create 4 time series each of the 24 spectra spectrum
             NUM_ADC_RANGES = 4
             ADC_RANGES = np.linspace(0, 512, NUM_ADC_RANGES + 1, dtype=np.uint16)
-            for i, (this_asic, this_chan) in enumerate(
-                zip(asic_nums[0], channel_nums[0])
-            ):
-                this_col = f"Det{this_asic}_{util.pixel_to_str(util.channel_to_pixel(this_chan))}"
-                log.info(
-                    f"Sending spectrum {i:02} {this_col} lightcurve to timestream to table spec{i:02}"
-                )
-                ts = TimeSeries(time=timestamps)
-                for j in range(NUM_ADC_RANGES):
-                    this_lc = np.sum(
-                        spectra[:, i, ADC_RANGES[j] : ADC_RANGES[j + 1]], axis=1
-                    )
-                    ts[f"channel{j}"] = this_lc
-                record_timeseries(ts, f"spec{i:02}", "meddea")
+            ts = TimeSeries(time=timestamps)
+            if np.all(
+                ids[0] == ids
+            ):  # check that the spectra ids have not been commanded to different values
+                for i, (this_asic, this_chan) in enumerate(
+                    zip(asic_nums[0], channel_nums[0])
+                ):
+                    this_pixel = f"Det{this_asic}{util.pixel_to_str(util.channel_to_pixel(this_chan))}"
+                    for j in range(NUM_ADC_RANGES):
+                        this_lc = np.sum(
+                            spectra[:, i, ADC_RANGES[j] : ADC_RANGES[j + 1]], axis=1
+                        )
+                        ts[f"{this_pixel}_channel{j}"] = this_lc
+                log.info(f"Sending spectrum lightcurves to timestream.")
+                record_timeseries(ts, f"spectrum", "meddea")
+            else:
+                # TODO split the data where the spectra have changed
+                pass
 
     # add other tasks below
     return output_files

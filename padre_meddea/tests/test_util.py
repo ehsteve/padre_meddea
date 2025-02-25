@@ -84,6 +84,78 @@ def test_has_baseline_error():
         util.has_baseline(padre_meddea._test_files_directory / "apid162_4packets.bin")
 
 
+def test_parse_pixelids():
+    ids = np.array(
+        [
+            51738,
+            51720,
+            51730,
+            51712,
+            51733,
+            51715,
+            51770,
+            51752,
+            51762,
+            51744,
+            51765,
+            51747,
+            51802,
+            51784,
+            51794,
+            51776,
+            51797,
+            51779,
+            51834,
+            51816,
+            51826,
+            51808,
+            51829,
+            51811,
+        ],
+        dtype=">u2",
+    )
+    asic_nums, channel_nums = util.parse_pixelids(ids)
+    assert np.all(
+        asic_nums
+        == np.array(
+            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3],
+            dtype=np.uint16,
+        )
+    )
+    assert np.all(
+        channel_nums
+        == np.array(
+            [
+                26,
+                8,
+                18,
+                0,
+                21,
+                3,
+                26,
+                8,
+                18,
+                0,
+                21,
+                3,
+                26,
+                8,
+                18,
+                0,
+                21,
+                3,
+                26,
+                8,
+                18,
+                0,
+                21,
+                3,
+            ],
+            dtype=np.uint16,
+        )
+    )
+
+
 @pytest.mark.parametrize(
     "pkt_time_s,pkt_time_clk,ph_clk,output",
     [
