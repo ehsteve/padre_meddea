@@ -10,7 +10,7 @@ from astropy.time import Time, TimeDelta
 import astropy.units as u
 from ccsdspy.utils import split_packet_bytes, split_by_apid
 
-# the following import of padre_meddea is required to ensure 
+# the following import of padre_meddea is required to ensure
 # that the environment variables are set correctly for the swxsoc functions to work
 import padre_meddea
 from swxsoc.util import parse_science_filename, create_science_filename

@@ -7,8 +7,10 @@ TIME_FORMATTED = "20240406T120621"
 
 import os
 
+
 def test_os_envs():
-    assert os.environ["SWXSOC_MISSION"] == 'padre'
+    assert os.environ["SWXSOC_MISSION"] == "padre"
+
 
 # fmt: off
 @pytest.mark.parametrize("instrument,time,level,version,filename", [
