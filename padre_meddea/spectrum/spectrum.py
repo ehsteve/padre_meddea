@@ -5,21 +5,16 @@ This module provides tools to analyze and manipulate meddea spectral data both s
 from pathlib import Path
 
 import numpy as np
-from numpy.polynomial import Polynomial
 
 import astropy.units as u
-from astropy.modeling import models
 from astropy.time import Time
 from astropy.nddata import StdDevUncertainty
-from astropy.table import Table
 from astropy.timeseries import TimeSeries, BinnedTimeSeries, aggregate_downsample
 
 from specutils import Spectrum1D, SpectralRegion
 from specutils.manipulation import extract_region
-from specutils.fitting import estimate_line_parameters, fit_lines
 
 import padre_meddea.util.util as util
-import padre_meddea
 
 DEFAULT_PIXEL_IDS = np.array(
     [
@@ -53,7 +48,6 @@ DEFAULT_PIXEL_IDS = np.array(
 MAX_PH_DATA_RATE = 100 * u.kilobyte / u.s
 
 __all__ = [
-    "get_calib_energy_func",
     "PhotonList",
     "SpectrumList",
 ]
@@ -262,7 +256,7 @@ class SpectrumList:
     """
 
     def __init__(self, pkt_list: TimeSeries, specs, pixel_ids):
-        self.bins = np.arange(0, 4097, 8, dtype=np.uint16)
+        self.bins = np.arange(0, 4097, 8, dtype=np.uint16) * u.pix
         self.time = pkt_list.time
         self.data = {"pkt_list": pkt_list, "specs": specs, "pixel_ids": pixel_ids}
         self.pkt_list = self.data["pkt_list"]
@@ -301,7 +295,7 @@ class SpectrumList:
             result += f"{self.time[0]} - {self.time[-1]} ({dt})\n"
         return result
 
-    def spectrum(self, asic_num: int = 0, pixel_num: int = 0, spec_index: int = -1):
+    def spectrum(self, asic_num: int = 0, pixel_num: int = 0, spec_index: int = -1) -> Spectrum1D:
         """Create a spectrum, integrates over all times
 
         Parameters
@@ -333,6 +327,35 @@ class SpectrumList:
             uncertainty=StdDevUncertainty(np.sqrt(flux) * u.count),
         )
         return result
+
+    def lightcurve(self, spectral_region: SpectralRegion, asic_num: int = 0, pixel_num: int = 0, spec_index: int = -1) -> TimeSeries:
+        """
+        Create a light curve
+
+        Parameters
+        ----------
+        asic_num : int
+            The asic or detector number (0 to 3)
+        pixel_num : int
+            The pixel number (0 to 11)
+        spectral_region : SpectralRegion
+            The spectral region(s) to integrate over
+            
+        Returns
+        -------
+        lc : TimeSeries
+            A TimeSeries of count rate with columns for each spectral region.
+        """
+        if spec_index == -1:
+            spec_index = self.get_spec_index(asic_num, pixel_num)
+        ts = TimeSeries(time=self.time)  
+        for this_region in spectral_region:
+            cts = u.Quantity(np.zeros_like(ts.time), self.specs.unit)
+            sub_specs = extract_region(self.specs, this_region)
+            cts = sub_specs[:, spec_index, :].sum(axis=1)
+            col_name = f"{str(this_region.lower).replace(' ','_')}-{str(this_region.upper).replace(' ','_')}"
+            ts[col_name] = cts / (10 * u.s)
+        return ts
 
     def get_spec_index(self, asic_num: int, pixel_num: int) -> int:
         """Given an asic number and pixel number, find the corresponding spectrum index."""
