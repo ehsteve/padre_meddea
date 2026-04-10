@@ -71,4 +71,6 @@ APID = {
 
 EPOCH = Time("2000-01-01 00:00", scale="utc")
 
+LAUNCH_DATE = Time("2025-07-23 00:00", scale="utc")
+
 log.debug(f"padre_meddea version: {__version__}")

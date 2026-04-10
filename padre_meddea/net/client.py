@@ -109,7 +109,9 @@ class PADREClient(GenericClient):
 
         # Process and return results
         metalist = []
-        for file_url in all_files:
+        for file_item in all_files:
+            file_url = file_item["url"]
+            file_size = file_item.get("size")
             log.debug(f"Processing file URL: {file_url}")
             info = parse_science_filename(file_url)
 
@@ -136,6 +138,7 @@ class PADREClient(GenericClient):
             rowdict["Descriptor"] = info.get("descriptor", "unknown")
             rowdict["File Name"] = filename
             rowdict["File Extension"] = file_extension
+            rowdict["File Size"] = file_size
             rowdict["url"] = file_url  # Key
             metalist.append(rowdict)
 
@@ -253,7 +256,12 @@ class PADREClient(GenericClient):
                     continue
 
                 elif href.lower().endswith(".fits") or href.lower().endswith(".dat"):
-                    files.append(full_url)
+                    files.append(
+                        {
+                            "url": full_url,
+                            "size": None,
+                        }
+                    )
 
             return files
         except Exception as e:

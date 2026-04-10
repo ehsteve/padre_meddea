@@ -1,14 +1,14 @@
 import os
-import pytest
 import tempfile
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
+import pytest
 from astropy.time import Time
 from sunpy.net import Fido
 from sunpy.net import attrs as a
 
-from padre_meddea.net.client import PADREClient, DataType
+from padre_meddea.net.client import DataType, PADREClient
 
 
 @pytest.fixture
@@ -139,6 +139,7 @@ def test_fido_search(http_file_server, monkeypatch):
             "l1" in padre_results["Level"],
         ]
     )
+    assert "File Size" in padre_results.colnames
 
     # Test Getting All Level 1 Data Across All Data Types
     result = Fido.search(
