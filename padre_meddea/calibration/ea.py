@@ -1,6 +1,7 @@
 """"""
 
 import astropy.units as u
+from astropy.table import QTable
 from roentgen.absorption import Material
 
 
@@ -48,3 +49,19 @@ def get_effective_area(energy: u.keV, no_al=False, no_be=False, no_mli=False):
     if not no_be:
         effective_area *= Material("Be", thickness=be_thickness).transmission(energy)
     return effective_area
+
+
+def get_ea_table(energy_ax: u.keV, num_detectors=1):
+    base_ea = get_effective_area(energy_ax) / 4.0 * num_detectors
+    no_al_ea = get_effective_area(energy_ax, no_al=True) / 4.0 * num_detectors
+    no_filters = (
+        get_effective_area(energy_ax, no_al=True, no_be=True) / 4.0 * num_detectors
+    )
+
+    result = QTable()
+    result["energy"] = energy_ax
+    result["base"] = base_ea
+    result["no_al"] = no_al_ea
+    result["no_filters"] = no_filters
+
+    return result
